@@ -1,33 +1,22 @@
 import { FunctionComponent, h, useEffect, useMemo, useState } from '../index.js';
+import {
+  buildHistoryLabel,
+  calculateResult,
+  createInitialGameState,
+  getCurrentBoard,
+  getMoveCount,
+  jumpToMove,
+  resetBoard,
+  playMove,
+} from '../tic-tac-toe/model.js';
 import './styles.css';
 
-const WINNING_LINES = [
-  [0, 1, 2],
-  [3, 4, 5],
-  [6, 7, 8],
-  [0, 3, 6],
-  [1, 4, 7],
-  [2, 5, 8],
-  [0, 4, 8],
-  [2, 4, 6],
-];
-
 function App() {
-  const [history, setHistory] = useState([createEmptyBoard()]);
-  const [stepIndex, setStepIndex] = useState(0);
-  const [xIsNext, setXIsNext] = useState(true);
-  const [score, setScore] = useState({ x: 0, o: 0, draws: 0 });
+  const [game, setGame] = useState(createInitialGameState);
+  const board = getCurrentBoard(game);
 
-  const board = history[stepIndex];
-
-  const result = useMemo(() => {
-    return calculateResult(board);
-  }, [board]);
-
-  const moveCount = useMemo(() => {
-    return board.filter(Boolean).length;
-  }, [board]);
-
+  const result = useMemo(() => calculateResult(board), [board]);
+  const moveCount = useMemo(() => getMoveCount(board), [board]);
   const statusText = useMemo(() => {
     if (result.winner) {
       return `${result.winner} wins the round.`;
@@ -37,64 +26,16 @@ function App() {
       return 'Draw game. Reset the board or jump to an earlier move.';
     }
 
-    return `${xIsNext ? 'X' : 'O'} turn. Choose a square.`;
-  }, [result.isDraw, result.winner, xIsNext]);
+    return `${game.xIsNext ? 'X' : 'O'} turn. Choose a square.`;
+  }, [game.xIsNext, result.isDraw, result.winner]);
 
   useEffect(() => {
     document.title = result.winner
       ? `Tic-Tac-Toe - ${result.winner} won`
       : result.isDraw
         ? 'Tic-Tac-Toe - Draw'
-        : `Tic-Tac-Toe - ${xIsNext ? 'X' : 'O'} turn`;
-  }, [result.isDraw, result.winner, xIsNext]);
-
-  const handleSquareClick = (index) => {
-    if (board[index] || result.winner || result.isDraw) {
-      return;
-    }
-
-    const nextBoard = [...board];
-    const nextToken = xIsNext ? 'X' : 'O';
-    nextBoard[index] = nextToken;
-
-    const nextHistory = history.slice(0, stepIndex + 1).concat([nextBoard]);
-    const nextResult = calculateResult(nextBoard);
-
-    setHistory(nextHistory);
-    setStepIndex(nextHistory.length - 1);
-    setXIsNext(!xIsNext);
-
-    if (nextResult.winner) {
-      setScore((current) => ({
-        ...current,
-        [nextResult.winner.toLowerCase()]: current[nextResult.winner.toLowerCase()] + 1,
-      }));
-      return;
-    }
-
-    if (nextResult.isDraw) {
-      setScore((current) => ({
-        ...current,
-        draws: current.draws + 1,
-      }));
-    }
-  };
-
-  const jumpToStep = (nextStepIndex) => {
-    setStepIndex(nextStepIndex);
-    setXIsNext(nextStepIndex % 2 === 0);
-  };
-
-  const resetBoard = () => {
-    setHistory([createEmptyBoard()]);
-    setStepIndex(0);
-    setXIsNext(true);
-  };
-
-  const resetEverything = () => {
-    resetBoard();
-    setScore({ x: 0, o: 0, draws: 0 });
-  };
+        : `Tic-Tac-Toe - ${game.xIsNext ? 'X' : 'O'} turn`;
+  }, [game.xIsNext, result.isDraw, result.winner]);
 
   return h(
     'main',
@@ -110,14 +51,14 @@ function App() {
         h(
           'p',
           { class: 'hero-description' },
-          'The old experiment screen has been replaced with a simple game that proves state updates, memoized winner checks, effects, and rerendering on top of the custom React2 runtime.',
+          'One root state object drives the whole game. Child components stay stateless and only receive props, which makes the custom hooks runtime easier to follow.',
         ),
       ),
       h(StatusPanel, {
         moveCount,
         statusText,
         winner: result.winner,
-        xIsNext,
+        xIsNext: game.xIsNext,
       }),
     ),
     h(
@@ -144,7 +85,7 @@ function App() {
         ),
         h(Board, {
           board,
-          onSquareClick: handleSquareClick,
+          onSquareClick: (index) => setGame((current) => playMove(current, index)),
           winningLine: result.winningLine,
         }),
         h(
@@ -154,7 +95,7 @@ function App() {
             'button',
             {
               class: 'primary-button',
-              onClick: resetBoard,
+              onClick: () => setGame((current) => resetBoard(current)),
               type: 'button',
             },
             'Reset Board',
@@ -163,7 +104,7 @@ function App() {
             'button',
             {
               class: 'ghost-button',
-              onClick: resetEverything,
+              onClick: () => setGame(createInitialGameState()),
               type: 'button',
             },
             'Reset Score',
@@ -173,12 +114,12 @@ function App() {
       h(
         'aside',
         { class: 'side-panel' },
-        h(ScoreCard, { score }),
-        h(GuideCard, { renderCount: history.length - 1 }),
+        h(ScoreCard, { score: game.score }),
+        h(GuideCard, { playedMoves: game.history.length - 1 }),
         h(HistoryCard, {
-          history,
-          stepIndex,
-          onJump: jumpToStep,
+          history: game.history,
+          stepIndex: game.stepIndex,
+          onJump: (stepIndex) => setGame((current) => jumpToMove(current, stepIndex)),
         }),
       ),
     ),
@@ -262,7 +203,7 @@ function ScoreItem({ label, value }) {
   );
 }
 
-function GuideCard({ renderCount }) {
+function GuideCard({ playedMoves }) {
   return h(
     'section',
     { class: 'info-card' },
@@ -270,9 +211,10 @@ function GuideCard({ renderCount }) {
     h(
       'ul',
       { class: 'guide-list' },
-      h('li', {}, 'All hooks live in the root App component because this runtime only supports root-level hooks.'),
-      h('li', {}, 'Winner detection and move count are memoized with useMemo.'),
-      h('li', {}, `The board has rerendered through ${renderCount} committed move${renderCount === 1 ? '' : 's'}.`),
+      h('li', {}, 'All state lives in the root App component as a single game object.'),
+      h('li', {}, 'Child components stay pure and only receive props from the root.'),
+      h('li', {}, 'Winner detection and move count stay derived with useMemo.'),
+      h('li', {}, `The board has committed ${playedMoves} move${playedMoves === 1 ? '' : 's'} so far.`),
     ),
   );
 }
@@ -299,46 +241,6 @@ function HistoryCard({ history, onJump, stepIndex }) {
       ),
     ),
   );
-}
-
-function buildHistoryLabel(history, index) {
-  if (index === 0) {
-    return 'Go to game start';
-  }
-
-  const currentBoard = history[index];
-  const previousBoard = history[index - 1];
-  const changedIndex = currentBoard.findIndex((cell, cellIndex) => cell !== previousBoard[cellIndex]);
-  const token = changedIndex >= 0 ? currentBoard[changedIndex] : '';
-
-  if (!token) {
-    return `Go to move ${index}`;
-  }
-
-  return `Go to move ${index} (${token} on ${changedIndex + 1})`;
-}
-
-function calculateResult(board) {
-  for (const line of WINNING_LINES) {
-    const [first, second, third] = line;
-    if (board[first] && board[first] === board[second] && board[first] === board[third]) {
-      return {
-        winner: board[first],
-        winningLine: line,
-        isDraw: false,
-      };
-    }
-  }
-
-  return {
-    winner: null,
-    winningLine: [],
-    isDraw: board.every(Boolean),
-  };
-}
-
-function createEmptyBoard() {
-  return Array(9).fill('');
 }
 
 const container = document.querySelector('#app');
