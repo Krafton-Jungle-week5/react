@@ -1,11 +1,17 @@
-import { createRootVNode as d, mountVNode as p, patchDom as m } from "./vdom.js";
-import { applyPatchOperations as q, cloneVNode as z, countVNodeStats as H, diffTrees as D, domNodeToVNode as F, domNodeToVNodeTree as I, getVNodeKey as j, parseHtmlToVNode as P, removeDomAttribute as $, renderVNode as K, serializeVNodeToHtml as Q, setDomAttribute as U } from "./vdom.js";
-let i = null;
-class R {
+import { createRootVNode as l, mountVNode as S, patchDom as y } from "./vdom.js";
+import { applyPatchOperations as P, cloneVNode as H, countVNodeStats as j, diffTrees as I, domNodeToVNode as L, domNodeToVNodeTree as U, getVNodeKey as K, parseHtmlToVNode as Q, removeDomAttribute as B, renderVNode as J, serializeVNodeToHtml as G, setDomAttribute as W } from "./vdom.js";
+let s = null;
+class A {
   constructor(t, n = {}) {
     if (typeof t != "function")
       throw new TypeError("FunctionComponent must receive a function component.");
-    this.renderFn = t, this.props = n, this.hooks = [], this.hookIndex = 0, this.container = null, this.currentTree = d([]), this.pendingEffects = [], this.updateScheduled = !1, this.isMounted = !1, this.isRendering = !1, this.childRenderDepth = 0, this.renderCount = 0;
+    this.renderFn = t, this.props = n, this.hooks = [], this.hookIndex = 0, this.container = null, this.currentTree = l([]), this.pendingEffects = [], this.updateScheduled = !1, this.isMounted = !1, this.isRendering = !1, this.childRenderDepth = 0, this.renderCount = 0, this.inspector = null, this.debugFlow = [], this.lastPatchOperations = [], this.debugSnapshot = h(this);
+  }
+  attachInspector(t) {
+    return this.inspector = t, this.publishDebugSnapshot(), this;
+  }
+  getDebugSnapshot() {
+    return this.debugSnapshot;
   }
   mount(t) {
     if (!t)
@@ -15,10 +21,18 @@ class R {
   update(t = this.props) {
     if (!this.container)
       throw new Error("update() can only be called after mount().");
-    return this.props = t, this.renderAndCommit(), this;
+    return this.props = t, this.recordDebugStep(
+      "scheduler",
+      `${this.getComponentLabel()}.update() 실행`,
+      "예약된 microtask가 실행되면서 루트 컴포넌트가 다시 렌더링을 시작합니다."
+    ), this.renderAndCommit(), this;
   }
   scheduleUpdate() {
-    this.updateScheduled || !this.container || (this.updateScheduled = !0, N(() => {
+    this.updateScheduled || !this.container || (this.updateScheduled = !0, this.recordDebugStep(
+      "scheduler",
+      `${this.getComponentLabel()}.scheduleUpdate() 예약`,
+      "setState가 만든 변경을 한 번의 microtask로 모아서 처리합니다."
+    ), V(() => {
       this.updateScheduled = !1, this.update(this.props);
     }));
   }
@@ -33,67 +47,126 @@ class R {
   renderAndCommit() {
     if (this.isRendering)
       throw new Error("update() cannot run while rendering is in progress.");
-    this.hookIndex = 0, this.pendingEffects = [], this.isRendering = !0;
-    const t = i;
+    this.hookIndex = 0, this.pendingEffects = [], this.isRendering = !0, this.recordDebugStep(
+      "render",
+      `${this.getComponentLabel()}.renderAndCommit() 시작`,
+      "hookIndex를 0으로 되돌리고 루트 함수형 컴포넌트를 다시 실행합니다."
+    );
+    const t = s;
     let n;
     try {
-      i = this;
-      const o = this.renderFn(this.props);
-      n = k(o);
+      s = this;
+      const r = this.renderFn(this.props);
+      n = k(r);
     } finally {
-      i = t, this.isRendering = !1;
+      s = t, this.isRendering = !1;
     }
-    this.isMounted ? m(this.container, this.currentTree, n) : (p(this.container, n), this.isMounted = !0), this.currentTree = n, this.renderCount += 1, this.flushEffects();
+    if (!this.isMounted)
+      S(this.container, n), this.isMounted = !0, this.lastPatchOperations = [], this.recordDebugStep(
+        "patch",
+        "초기 마운트",
+        "첫 렌더에서는 이전 트리가 없어서 Virtual DOM을 그대로 실제 DOM에 마운트합니다."
+      );
+    else {
+      const r = y(this.container, this.currentTree, n);
+      this.lastPatchOperations = r, this.recordDebugStep(
+        "diff",
+        "diff 단계 완료",
+        `이전 트리와 새 트리를 비교해서 ${r.length}개의 패치 작업을 찾았습니다.`
+      ), this.recordDebugStep(
+        "patch",
+        "patch 단계 완료",
+        g(r)
+      );
+    }
+    this.currentTree = n, this.renderCount += 1, this.publishDebugSnapshot(), this.flushEffects();
   }
   flushEffects() {
     const t = this.pendingEffects;
-    this.pendingEffects = [];
+    this.pendingEffects = [], t.length && this.recordDebugStep(
+      "effect",
+      "flushEffects() 실행",
+      `${t.length}개의 useEffect callback을 커밋 이후 순서대로 실행합니다.`
+    );
     for (const n of t) {
-      const o = this.hooks[n.index];
-      typeof o.cleanup == "function" && o.cleanup();
-      const r = n.callback();
-      o.cleanup = typeof r == "function" ? r : null;
+      const r = this.hooks[n.index];
+      typeof r.cleanup == "function" && (this.recordDebugStep(
+        "effect",
+        `useEffect 슬롯 ${n.index} cleanup`,
+        "이전 effect가 남긴 cleanup 함수를 먼저 실행합니다."
+      ), r.cleanup()), this.recordDebugStep(
+        "effect",
+        `useEffect 슬롯 ${n.index} 실행`,
+        "의존성이 변경된 effect callback을 실행합니다."
+      );
+      const o = n.callback();
+      r.cleanup = typeof o == "function" ? o : null, this.publishDebugSnapshot();
     }
   }
+  resetDebugFlow() {
+    this.debugFlow = [], this.publishDebugSnapshot();
+  }
+  recordDebugStep(t, n, r) {
+    this.debugFlow = [
+      ...this.debugFlow,
+      {
+        id: `flow-${this.renderCount}-${this.debugFlow.length + 1}`,
+        kind: t,
+        title: n,
+        detail: r
+      }
+    ], this.publishDebugSnapshot();
+  }
+  publishDebugSnapshot() {
+    var t;
+    this.debugSnapshot = h(this), (t = this.inspector) != null && t.publish && this.inspector.publish(this.debugSnapshot);
+  }
+  getComponentLabel() {
+    return this.renderFn.name || "App";
+  }
 }
-function V(e, t = {}, ...n) {
-  const o = C(n), r = {
+function F(e, t = {}, ...n) {
+  const r = $(n), o = {
     ...t || {},
-    children: o
+    children: r
   };
   if (typeof e == "function") {
-    const h = i ? i.renderChildComponent(e, r) : e(r);
-    return w(h);
+    const b = s ? s.renderChildComponent(e, o) : e(o);
+    return C(b);
   }
-  const s = g(t);
+  const u = D(t);
   return {
     type: "element",
     tag: e,
-    attrs: Object.keys(s).length ? s : void 0,
-    children: o
+    attrs: Object.keys(u).length ? u : void 0,
+    children: r
   };
 }
-function S(e) {
-  const t = f("useState"), n = c(
+function v(e) {
+  const t = a("useState"), n = f(
     t,
     "useState",
     "state",
     () => ({
       kind: "state",
       queue: [],
-      value: b(e)
+      value: O(e)
     })
   );
-  v(n);
-  const o = (r) => {
+  M(n);
+  const r = (o) => {
     if (t.isRendering)
       throw new Error("setState must be called from an event or effect, not during render.");
-    n.queue.push(r), t.scheduleUpdate();
+    t.updateScheduled || t.resetDebugFlow(), n.queue.push(o), t.recordDebugStep(
+      "state",
+      `useState 슬롯 ${t.hooks.indexOf(n)} queue 적재`,
+      `루트 ${t.getComponentLabel()}의 useState가 다음 값을 큐에 넣었습니다. 현재 대기 중인 업데이트 수는 ${n.queue.length}개입니다.`
+    ), t.scheduleUpdate();
   };
-  return [n.value, o];
+  return [n.value, r];
 }
-function T(e, t) {
-  const n = f("useEffect"), o = n.hookIndex, r = c(
+function R(e, t) {
+  const n = a("useEffect"), r = n.hookIndex, o = f(
     n,
     "useEffect",
     "effect",
@@ -103,13 +176,17 @@ function T(e, t) {
       deps: void 0
     })
   );
-  a(r.deps, t) && (n.pendingEffects.push({
-    index: o,
+  p(o.deps, t) && (n.recordDebugStep(
+    "effect",
+    `useEffect 슬롯 ${r} 등록`,
+    "의존성이 바뀌어서 이번 커밋 이후 effect callback이 실행되도록 예약했습니다."
+  ), n.pendingEffects.push({
+    index: r,
     callback: e
-  }), r.deps = l(t));
+  }), o.deps = m(t));
 }
-function x(e, t) {
-  const n = f("useMemo"), o = c(
+function T(e, t) {
+  const n = a("useMemo"), r = f(
     n,
     "useMemo",
     "memo",
@@ -119,53 +196,57 @@ function x(e, t) {
       value: void 0
     })
   );
-  return a(o.deps, t) && (o.value = e(), o.deps = l(t)), o.value;
+  return p(r.deps, t) && (r.value = e(), r.deps = m(t), n.recordDebugStep(
+    "memo",
+    `useMemo 슬롯 ${n.hooks.indexOf(r)} 재계산`,
+    `의존성이 바뀌어서 memo 값을 다시 계산했습니다. 현재 값: ${i(r.value)}.`
+  )), r.value;
 }
-function f(e) {
-  if (!i || !i.isRendering)
+function a(e) {
+  if (!s || !s.isRendering)
     throw new Error(`${e} can only be used while FunctionComponent is rendering.`);
-  if (i.childRenderDepth > 0)
+  if (s.childRenderDepth > 0)
     throw new Error(`${e} can only be used in the root component of this runtime.`);
-  return i;
+  return s;
 }
-function y(e, t, n) {
+function w(e, t, n) {
   if (e.kind !== t)
     throw new Error(`${n} was called in a different order. Hooks must keep a stable call order.`);
 }
-function c(e, t, n, o) {
-  const r = e.hookIndex++;
-  let s = e.hooks[r];
-  return s || (s = o(), e.hooks[r] = s), y(s, n, t), s;
+function f(e, t, n, r) {
+  const o = e.hookIndex++;
+  let u = e.hooks[o];
+  return u || (u = r(), e.hooks[o] = u), w(u, n, t), u;
 }
-function g(e = {}) {
+function D(e = {}) {
   const t = {};
-  for (const [n, o] of Object.entries(e || {}))
-    if (!(n === "children" || o === !1 || o == null)) {
+  for (const [n, r] of Object.entries(e || {}))
+    if (!(n === "children" || r === !1 || r == null)) {
       if (n === "className") {
-        t.class = o;
+        t.class = r;
         continue;
       }
       if (n === "htmlFor") {
-        t.for = o;
+        t.for = r;
         continue;
       }
-      t[n] = o === !0 ? "" : o;
+      t[n] = r === !0 ? "" : r;
     }
   return t;
 }
 function k(e) {
-  return d(u(e));
-}
-function w(e) {
-  const t = u(e);
-  return t.length === 1 ? t[0] : t;
+  return l(c(e));
 }
 function C(e) {
-  return e.flatMap((t) => u(t));
+  const t = c(e);
+  return t.length === 1 ? t[0] : t;
 }
-function u(e) {
+function $(e) {
+  return e.flatMap((t) => c(t));
+}
+function c(e) {
   if (Array.isArray(e))
-    return e.flatMap((t) => u(t));
+    return e.flatMap((t) => c(t));
   if (e == null || typeof e == "boolean")
     return [];
   if (typeof e == "string" || typeof e == "number")
@@ -182,16 +263,16 @@ function u(e) {
 function E(e) {
   return !!e && typeof e == "object" && typeof e.type == "string";
 }
-function a(e, t) {
-  return t === void 0 || e === void 0 || e.length !== t.length ? !0 : t.some((n, o) => !Object.is(n, e[o]));
+function p(e, t) {
+  return t === void 0 || e === void 0 || e.length !== t.length ? !0 : t.some((n, r) => !Object.is(n, e[r]));
 }
-function l(e) {
+function m(e) {
   return Array.isArray(e) ? [...e] : void 0;
 }
-function b(e) {
+function O(e) {
   return typeof e == "function" ? e() : e;
 }
-function v(e) {
+function M(e) {
   if (!e.queue.length)
     return;
   let t = e.value;
@@ -199,7 +280,45 @@ function v(e) {
     t = typeof n == "function" ? n(t) : n;
   e.queue = [], e.value = t;
 }
-function N(e) {
+function h(e) {
+  return {
+    renderCount: e.renderCount,
+    hooks: e.hooks.map((t, n) => N(t, n)),
+    flow: e.debugFlow,
+    patchSummary: g(e.lastPatchOperations)
+  };
+}
+function N(e, t) {
+  return e.kind === "state" ? {
+    slot: t,
+    hook: "useState",
+    summary: i(e.value),
+    detail: `현재 값: ${i(e.value)}, 대기 중 queue: ${e.queue.length}개`
+  } : e.kind === "memo" ? {
+    slot: t,
+    hook: "useMemo",
+    summary: i(e.value),
+    detail: `deps: ${d(e.deps)}, 계산 결과: ${i(e.value)}`
+  } : {
+    slot: t,
+    hook: "useEffect",
+    summary: e.cleanup ? "cleanup 보유" : "cleanup 없음",
+    detail: `deps: ${d(e.deps)}, cleanup: ${e.cleanup ? "있음" : "없음"}`
+  };
+}
+function g(e = []) {
+  if (!e.length)
+    return "적용할 patch 작업이 없었습니다.";
+  const t = e.reduce((n, r) => (n[r.type] = (n[r.type] || 0) + 1, n), {});
+  return Object.entries(t).map(([n, r]) => `${n} ${r}개`).join(", ");
+}
+function d(e) {
+  return Array.isArray(e) ? e.map((t) => i(t)).join(", ") : "없음";
+}
+function i(e) {
+  return typeof e == "string" ? e : typeof e == "number" || typeof e == "boolean" || e == null ? String(e) : JSON.stringify(e);
+}
+function V(e) {
   if (typeof queueMicrotask == "function") {
     queueMicrotask(e);
     return;
@@ -207,24 +326,24 @@ function N(e) {
   Promise.resolve().then(e);
 }
 export {
-  R as FunctionComponent,
-  q as applyPatchOperations,
-  z as cloneVNode,
-  H as countVNodeStats,
-  d as createRootVNode,
-  D as diffTrees,
-  F as domNodeToVNode,
-  I as domNodeToVNodeTree,
-  j as getVNodeKey,
-  V as h,
-  p as mountVNode,
-  P as parseHtmlToVNode,
-  m as patchDom,
-  $ as removeDomAttribute,
-  K as renderVNode,
-  Q as serializeVNodeToHtml,
-  U as setDomAttribute,
-  T as useEffect,
-  x as useMemo,
-  S as useState
+  A as FunctionComponent,
+  P as applyPatchOperations,
+  H as cloneVNode,
+  j as countVNodeStats,
+  l as createRootVNode,
+  I as diffTrees,
+  L as domNodeToVNode,
+  U as domNodeToVNodeTree,
+  K as getVNodeKey,
+  F as h,
+  S as mountVNode,
+  Q as parseHtmlToVNode,
+  y as patchDom,
+  B as removeDomAttribute,
+  J as renderVNode,
+  G as serializeVNodeToHtml,
+  W as setDomAttribute,
+  R as useEffect,
+  T as useMemo,
+  v as useState
 };
