@@ -1,6 +1,5 @@
 import { FunctionComponent, h, useEffect, useMemo, useState } from '../index.js';
 import {
-  buildHistoryLabel,
   calculateResult,
   createInitialGameState,
   getCurrentBoard,
@@ -9,10 +8,19 @@ import {
   resetBoard,
   playMove,
 } from '../tic-tac-toe/model.js';
+import {
+  createInitialTimeline,
+  createTimelineEntry,
+  describeAction,
+  describeCommit,
+  describeEffectSync,
+  pushTimelineEntry,
+} from '../tic-tac-toe/timeline.js';
 import './styles.css';
 
 function App() {
   const [game, setGame] = useState(createInitialGameState);
+  const [timeline, setTimeline] = useState(createInitialTimeline);
   const board = getCurrentBoard(game);
 
   const result = useMemo(() => calculateResult(board), [board]);
@@ -30,12 +38,65 @@ function App() {
   }, [game.xIsNext, result.isDraw, result.winner]);
 
   useEffect(() => {
+    setTimeline((currentTimeline) =>
+      pushTimelineEntry(
+        currentTimeline,
+        createTimelineEntry('render', 'Render committed', describeCommit(game, result, moveCount)),
+      ),
+    );
+  }, [game, moveCount, result]);
+
+  useEffect(() => {
     document.title = result.winner
       ? `Tic-Tac-Toe - ${result.winner} won`
       : result.isDraw
         ? 'Tic-Tac-Toe - Draw'
         : `Tic-Tac-Toe - ${game.xIsNext ? 'X' : 'O'} turn`;
-  }, [game.xIsNext, result.isDraw, result.winner]);
+
+    setTimeline((currentTimeline) =>
+      pushTimelineEntry(
+        currentTimeline,
+        createTimelineEntry('effect', 'Effect synchronized', describeEffectSync(game.xIsNext, result)),
+      ),
+    );
+  }, [game.xIsNext, result]);
+
+  const applyGameAction = (action, nextGame) => {
+    if (nextGame === game) {
+      setTimeline((currentTimeline) =>
+        pushTimelineEntry(
+          currentTimeline,
+          createTimelineEntry('action', 'Input ignored', describeAction({ ...action, accepted: false }, game, result)),
+        ),
+      );
+      return;
+    }
+
+    const nextBoard = getCurrentBoard(nextGame);
+    const nextResult = calculateResult(nextBoard);
+
+    setTimeline((currentTimeline) => {
+      const withAction = pushTimelineEntry(
+        currentTimeline,
+        createTimelineEntry(
+          'action',
+          action.type === 'square' ? `Square ${action.index + 1} clicked` : action.title,
+          describeAction({ ...action, accepted: true }, nextGame, nextResult),
+        ),
+      );
+
+      return pushTimelineEntry(
+        withAction,
+        createTimelineEntry(
+          'state',
+          'Root state queued',
+          `The root App scheduled a new game snapshot. Next step: ${nextGame.stepIndex}, next turn: ${nextGame.xIsNext ? 'X' : 'O'}.`,
+        ),
+      );
+    });
+
+    setGame(nextGame);
+  };
 
   return h(
     'main',
@@ -51,7 +112,7 @@ function App() {
         h(
           'p',
           { class: 'hero-description' },
-          'One root state object drives the whole game. Child components stay stateless and only receive props, which makes the custom hooks runtime easier to follow.',
+          'The sidebar now shows what our custom React runtime does after each input: root state scheduling, render commit, and the effect that syncs the browser title.',
         ),
       ),
       h(StatusPanel, {
@@ -85,7 +146,7 @@ function App() {
         ),
         h(Board, {
           board,
-          onSquareClick: (index) => setGame((current) => playMove(current, index)),
+          onSquareClick: (index) => applyGameAction({ type: 'square', index }, playMove(game, index)),
           winningLine: result.winningLine,
         }),
         h(
@@ -95,7 +156,7 @@ function App() {
             'button',
             {
               class: 'primary-button',
-              onClick: () => setGame((current) => resetBoard(current)),
+              onClick: () => applyGameAction({ type: 'reset-board', title: 'Board reset requested' }, resetBoard(game)),
               type: 'button',
             },
             'Reset Board',
@@ -104,7 +165,7 @@ function App() {
             'button',
             {
               class: 'ghost-button',
-              onClick: () => setGame(createInitialGameState()),
+              onClick: () => applyGameAction({ type: 'reset-score', title: 'Full reset requested' }, createInitialGameState()),
               type: 'button',
             },
             'Reset Score',
@@ -116,10 +177,15 @@ function App() {
         { class: 'side-panel' },
         h(ScoreCard, { score: game.score }),
         h(GuideCard, { playedMoves: game.history.length - 1 }),
-        h(HistoryCard, {
+        h(RuntimeTimelineCard, { timeline }),
+        h(TimeTravelCard, {
           history: game.history,
           stepIndex: game.stepIndex,
-          onJump: (stepIndex) => setGame((current) => jumpToMove(current, stepIndex)),
+          onJump: (stepIndex) =>
+            applyGameAction(
+              { type: 'jump', stepIndex, title: `Jumped to move ${stepIndex}` },
+              jumpToMove(game, stepIndex),
+            ),
         }),
       ),
     ),
@@ -211,20 +277,44 @@ function GuideCard({ playedMoves }) {
     h(
       'ul',
       { class: 'guide-list' },
-      h('li', {}, 'All state lives in the root App component as a single game object.'),
+      h('li', {}, 'All state lives in the root App component.'),
       h('li', {}, 'Child components stay pure and only receive props from the root.'),
-      h('li', {}, 'Winner detection and move count stay derived with useMemo.'),
+      h('li', {}, 'The runtime timeline focuses on queued state, committed render, and effect sync.'),
       h('li', {}, `The board has committed ${playedMoves} move${playedMoves === 1 ? '' : 's'} so far.`),
     ),
   );
 }
 
-function HistoryCard({ history, onJump, stepIndex }) {
+function RuntimeTimelineCard({ timeline }) {
+  return h(
+    'section',
+    { class: 'info-card history-card' },
+    h('p', { class: 'panel-kicker' }, 'Runtime Timeline'),
+    h('h3', { class: 'history-title' }, 'Internal Flow'),
+    h(
+      'div',
+      { class: 'timeline-list' },
+      ...timeline.map((entry) =>
+        h(
+          'article',
+          {
+            class: `timeline-entry is-${entry.kind}`,
+            'data-key': entry.id,
+          },
+          h('strong', { class: 'timeline-title' }, entry.title),
+          h('p', { class: 'timeline-detail' }, entry.detail),
+        ),
+      ),
+    ),
+  );
+}
+
+function TimeTravelCard({ history, onJump, stepIndex }) {
   return h(
     'section',
     { class: 'info-card history-card' },
     h('p', { class: 'panel-kicker' }, 'Time Travel'),
-    h('h3', { class: 'history-title' }, 'Move History'),
+    h('h3', { class: 'history-title' }, 'Board Snapshots'),
     h(
       'div',
       { class: 'history-list' },
@@ -236,7 +326,7 @@ function HistoryCard({ history, onJump, stepIndex }) {
             onClick: () => onJump(index),
             type: 'button',
           },
-          buildHistoryLabel(history, index),
+          index === 0 ? 'Go to game start' : `Go to move ${index}`,
         ),
       ),
     ),

@@ -1,6 +1,5 @@
 import { FunctionComponent, h, useEffect, useMemo, useState } from '../nonfiber/index.js';
 import {
-  buildHistoryLabel,
   calculateResult,
   createInitialGameState,
   getCurrentBoard,
@@ -9,10 +8,19 @@ import {
   resetBoard,
   playMove,
 } from '../tic-tac-toe/model.js';
+import {
+  createInitialTimeline,
+  createTimelineEntry,
+  describeAction,
+  describeCommit,
+  describeEffectSync,
+  pushTimelineEntry,
+} from '../tic-tac-toe/timeline.js';
 import '../demo/styles.css';
 
 function App() {
   const [game, setGame] = useState(createInitialGameState);
+  const [timeline, setTimeline] = useState(createInitialTimeline);
   const board = getCurrentBoard(game);
 
   const result = useMemo(() => calculateResult(board), [board]);
@@ -30,12 +38,65 @@ function App() {
   }, [game.xIsNext, result.isDraw, result.winner]);
 
   useEffect(() => {
+    setTimeline((currentTimeline) =>
+      pushTimelineEntry(
+        currentTimeline,
+        createTimelineEntry('render', 'Render committed', describeCommit(game, result, moveCount)),
+      ),
+    );
+  }, [game, moveCount, result]);
+
+  useEffect(() => {
     document.title = result.winner
       ? `Non-Fiber Tic-Tac-Toe - ${result.winner} won`
       : result.isDraw
         ? 'Non-Fiber Tic-Tac-Toe - Draw'
         : `Non-Fiber Tic-Tac-Toe - ${game.xIsNext ? 'X' : 'O'} turn`;
-  }, [game.xIsNext, result.isDraw, result.winner]);
+
+    setTimeline((currentTimeline) =>
+      pushTimelineEntry(
+        currentTimeline,
+        createTimelineEntry('effect', 'Effect synchronized', describeEffectSync(game.xIsNext, result)),
+      ),
+    );
+  }, [game.xIsNext, result]);
+
+  const applyGameAction = (action, nextGame) => {
+    if (nextGame === game) {
+      setTimeline((currentTimeline) =>
+        pushTimelineEntry(
+          currentTimeline,
+          createTimelineEntry('action', 'Input ignored', describeAction({ ...action, accepted: false }, game, result)),
+        ),
+      );
+      return;
+    }
+
+    const nextBoard = getCurrentBoard(nextGame);
+    const nextResult = calculateResult(nextBoard);
+
+    setTimeline((currentTimeline) => {
+      const withAction = pushTimelineEntry(
+        currentTimeline,
+        createTimelineEntry(
+          'action',
+          action.type === 'square' ? `Square ${action.index + 1} clicked` : action.title,
+          describeAction({ ...action, accepted: true }, nextGame, nextResult),
+        ),
+      );
+
+      return pushTimelineEntry(
+        withAction,
+        createTimelineEntry(
+          'state',
+          'Root state queued',
+          `The root App scheduled a new game snapshot. Next step: ${nextGame.stepIndex}, next turn: ${nextGame.xIsNext ? 'X' : 'O'}.`,
+        ),
+      );
+    });
+
+    setGame(nextGame);
+  };
 
   return h(
     'main',
@@ -51,7 +112,7 @@ function App() {
         h(
           'p',
           { class: 'hero-description' },
-          'This page uses the exact same root-state model as the main demo, but it is wired through the nonfiber entry to show that the hooks runtime works without a separate fiber layer.',
+          'This non-fiber entry uses the same root-state timeline to show how the runtime behaves after input, without relying on a separate fiber layer.',
         ),
       ),
       h(StatusPanel, {
@@ -85,7 +146,7 @@ function App() {
         ),
         h(Board, {
           board,
-          onSquareClick: (index) => setGame((current) => playMove(current, index)),
+          onSquareClick: (index) => applyGameAction({ type: 'square', index }, playMove(game, index)),
           winningLine: result.winningLine,
         }),
         h(
@@ -93,12 +154,12 @@ function App() {
           { class: 'button-row' },
           h(
             'button',
-            { class: 'primary-button', onClick: () => setGame((current) => resetBoard(current)), type: 'button' },
+            { class: 'primary-button', onClick: () => applyGameAction({ type: 'reset-board', title: 'Board reset requested' }, resetBoard(game)), type: 'button' },
             'Reset Board',
           ),
           h(
             'button',
-            { class: 'ghost-button', onClick: () => setGame(createInitialGameState()), type: 'button' },
+            { class: 'ghost-button', onClick: () => applyGameAction({ type: 'reset-score', title: 'Full reset requested' }, createInitialGameState()), type: 'button' },
             'Reset Score',
           ),
         ),
@@ -107,10 +168,15 @@ function App() {
         'aside',
         { class: 'side-panel' },
         h(ScoreCard, { score: game.score }),
-        h(RuntimeCard, { playedMoves: game.history.length - 1, moveCount }),
-        h(HistoryCard, {
+        h(RuntimeCard, { playedMoves: game.history.length - 1 }),
+        h(RuntimeTimelineCard, { timeline }),
+        h(TimeTravelCard, {
           history: game.history,
-          onJump: (stepIndex) => setGame((current) => jumpToMove(current, stepIndex)),
+          onJump: (stepIndex) =>
+            applyGameAction(
+              { type: 'jump', stepIndex, title: `Jumped to move ${stepIndex}` },
+              jumpToMove(game, stepIndex),
+            ),
           stepIndex: game.stepIndex,
         }),
       ),
@@ -195,7 +261,7 @@ function ScoreItem({ label, value }) {
   );
 }
 
-function RuntimeCard({ playedMoves, moveCount }) {
+function RuntimeCard({ playedMoves }) {
   return h(
     'section',
     { class: 'info-card' },
@@ -203,20 +269,44 @@ function RuntimeCard({ playedMoves, moveCount }) {
     h(
       'ul',
       { class: 'guide-list' },
-      h('li', {}, 'The whole game stays in one root state object.'), 
+      h('li', {}, 'The whole game stays in one root state object.'),
       h('li', {}, 'Child components stay stateless and render only from props.'),
-      h('li', {}, 'State changes schedule rerenders through runtime.js and patch the DOM through vdom.js.'),
-      h('li', {}, `The current history stack has ${playedMoves + 1} snapshot${playedMoves === 0 ? '' : 's'} after ${moveCount} played moves.`),
+      h('li', {}, 'The runtime timeline records action, queued state, render commit, and effect sync.'),
+      h('li', {}, `The board has committed ${playedMoves} move${playedMoves === 1 ? '' : 's'} so far.`),
     ),
   );
 }
 
-function HistoryCard({ history, onJump, stepIndex }) {
+function RuntimeTimelineCard({ timeline }) {
+  return h(
+    'section',
+    { class: 'info-card history-card' },
+    h('p', { class: 'panel-kicker' }, 'Runtime Timeline'),
+    h('h3', { class: 'history-title' }, 'Internal Flow'),
+    h(
+      'div',
+      { class: 'timeline-list' },
+      ...timeline.map((entry) =>
+        h(
+          'article',
+          {
+            class: `timeline-entry is-${entry.kind}`,
+            'data-key': entry.id,
+          },
+          h('strong', { class: 'timeline-title' }, entry.title),
+          h('p', { class: 'timeline-detail' }, entry.detail),
+        ),
+      ),
+    ),
+  );
+}
+
+function TimeTravelCard({ history, onJump, stepIndex }) {
   return h(
     'section',
     { class: 'info-card history-card' },
     h('p', { class: 'panel-kicker' }, 'Time Travel'),
-    h('h3', { class: 'history-title' }, 'Move History'),
+    h('h3', { class: 'history-title' }, 'Board Snapshots'),
     h(
       'div',
       { class: 'history-list' },
@@ -228,7 +318,7 @@ function HistoryCard({ history, onJump, stepIndex }) {
             onClick: () => onJump(index),
             type: 'button',
           },
-          buildHistoryLabel(history, index),
+          index === 0 ? 'Go to game start' : `Go to move ${index}`,
         ),
       ),
     ),
