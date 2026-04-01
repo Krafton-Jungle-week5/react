@@ -1,9 +1,7 @@
-import { createRootVNode as h, mountVNode as p } from "./vdom.js";
-import { cloneVNode as z, countVNodeStats as O, domNodeToVNode as q, domNodeToVNodeTree as D, getVNodeKey as H, parseHtmlToVNode as I, removeDomAttribute as P, renderVNode as j, serializeVNodeToHtml as U, setDomAttribute as $ } from "./vdom.js";
-import { reconcileTrees as m, commitRoot as k } from "./fiber.js";
-import { ChildDeletion as B, NoFlags as L, Placement as Q, Update as G, formatFiberPath as J, getFlagNames as W, summarizeCommitOperations as X } from "./fiber.js";
+import { createRootVNode as h, mountVNode as p, patchDom as m } from "./vdom.js";
+import { cloneVNode as b, countVNodeStats as q, domNodeToVNode as z, domNodeToVNodeTree as O, getVNodeKey as D, parseHtmlToVNode as H, removeDomAttribute as I, renderVNode as F, serializeVNodeToHtml as j, setDomAttribute as P } from "./vdom.js";
 let i = null;
-class V {
+class M {
   constructor(t, o = {}) {
     if (typeof t != "function")
       throw new TypeError("FunctionComponent는 함수형 컴포넌트를 받아야 합니다.");
@@ -20,7 +18,7 @@ class V {
     return this.props = t, this.renderAndCommit(), this;
   }
   scheduleUpdate() {
-    this.updateScheduled || !this.container || (this.updateScheduled = !0, x(() => {
+    this.updateScheduled || !this.container || (this.updateScheduled = !0, N(() => {
       this.updateScheduled = !1, this.update(this.props);
     }));
   }
@@ -41,17 +39,11 @@ class V {
     try {
       i = this;
       const n = this.renderFn(this.props);
-      o = g(n);
+      o = y(n);
     } finally {
       i = t, this.isRendering = !1;
     }
-    if (!this.isMounted)
-      p(this.container, o), this.isMounted = !0;
-    else {
-      const n = m(this.currentTree, o);
-      k(this.container, n.rootFiber);
-    }
-    this.currentTree = o, this.renderCount += 1, this.flushEffects();
+    this.isMounted ? m(this.container, this.currentTree, o) : (p(this.container, o), this.isMounted = !0), this.currentTree = o, this.renderCount += 1, this.flushEffects();
   }
   flushEffects() {
     const t = this.pendingEffects;
@@ -64,16 +56,16 @@ class V {
     }
   }
 }
-function v(e, t = {}, ...o) {
-  const n = C(o), r = {
+function R(e, t = {}, ...o) {
+  const n = w(o), r = {
     ...t || {},
     children: n
   };
   if (typeof e == "function") {
     const u = i ? i.renderChildComponent(e, r) : e(r);
-    return w(u);
+    return g(u);
   }
-  const s = y(t);
+  const s = k(t);
   return {
     type: "element",
     tag: e,
@@ -81,13 +73,13 @@ function v(e, t = {}, ...o) {
     children: n
   };
 }
-function T(e) {
+function V(e) {
   const t = c("useState"), o = t.hookIndex++;
   let n = t.hooks[o];
   if (n || (n = {
     kind: "state",
     queue: [],
-    value: N(e)
+    value: C(e)
   }, t.hooks[o] = n), d(n, "state", "useState"), n.queue.length) {
     let s = n.value;
     for (const u of n.queue)
@@ -101,26 +93,26 @@ function T(e) {
   };
   return [n.value, r];
 }
-function S(e, t) {
+function v(e, t) {
   const o = c("useEffect"), n = o.hookIndex++;
   let r = o.hooks[n];
   r || (r = {
     kind: "effect",
     cleanup: null,
     deps: void 0
-  }, o.hooks[n] = r), d(r, "effect", "useEffect"), a(r.deps, t) && (o.pendingEffects.push({
+  }, o.hooks[n] = r), d(r, "effect", "useEffect"), l(r.deps, t) && (o.pendingEffects.push({
     index: n,
     callback: e
-  }), r.deps = l(t));
+  }), r.deps = a(t));
 }
-function b(e, t) {
+function S(e, t) {
   const o = c("useMemo"), n = o.hookIndex++;
   let r = o.hooks[n];
   return r || (r = {
     kind: "memo",
     deps: void 0,
     value: void 0
-  }, o.hooks[n] = r), d(r, "memo", "useMemo"), a(r.deps, t) && (r.value = e(), r.deps = l(t)), r.value;
+  }, o.hooks[n] = r), d(r, "memo", "useMemo"), l(r.deps, t) && (r.value = e(), r.deps = a(t)), r.value;
 }
 function c(e) {
   if (!i || !i.isRendering)
@@ -133,7 +125,7 @@ function d(e, t, o) {
   if (e.kind !== t)
     throw new Error(`${o} 호출 순서가 바뀌었습니다. Hook은 항상 같은 순서로 호출되어야 합니다.`);
 }
-function y(e = {}) {
+function k(e = {}) {
   const t = {};
   for (const [o, n] of Object.entries(e || {}))
     if (!(o === "children" || n === !1 || n == null)) {
@@ -149,14 +141,14 @@ function y(e = {}) {
     }
   return t;
 }
-function g(e) {
+function y(e) {
   return h(f(e));
 }
-function w(e) {
+function g(e) {
   const t = f(e);
   return t.length === 1 ? t[0] : t;
 }
-function C(e) {
+function w(e) {
   return e.flatMap((t) => f(t));
 }
 function f(e) {
@@ -178,16 +170,16 @@ function f(e) {
 function E(e) {
   return !!e && typeof e == "object" && typeof e.type == "string";
 }
-function a(e, t) {
+function l(e, t) {
   return t === void 0 || e === void 0 || e.length !== t.length ? !0 : t.some((o, n) => !Object.is(o, e[n]));
 }
-function l(e) {
+function a(e) {
   return Array.isArray(e) ? [...e] : void 0;
 }
-function N(e) {
+function C(e) {
   return typeof e == "function" ? e() : e;
 }
-function x(e) {
+function N(e) {
   if (typeof queueMicrotask == "function") {
     queueMicrotask(e);
     return;
@@ -195,30 +187,22 @@ function x(e) {
   Promise.resolve().then(e);
 }
 export {
-  B as ChildDeletion,
-  V as FunctionComponent,
-  L as NoFlags,
-  Q as Placement,
-  G as Update,
-  z as cloneVNode,
-  k as commitRoot,
-  O as countVNodeStats,
+  M as FunctionComponent,
+  b as cloneVNode,
+  q as countVNodeStats,
   h as createRootVNode,
-  q as domNodeToVNode,
-  D as domNodeToVNodeTree,
-  J as formatFiberPath,
-  W as getFlagNames,
-  H as getVNodeKey,
-  v as h,
+  z as domNodeToVNode,
+  O as domNodeToVNodeTree,
+  D as getVNodeKey,
+  R as h,
   p as mountVNode,
-  I as parseHtmlToVNode,
-  m as reconcileTrees,
-  P as removeDomAttribute,
-  j as renderVNode,
-  U as serializeVNodeToHtml,
-  $ as setDomAttribute,
-  X as summarizeCommitOperations,
-  S as useEffect,
-  b as useMemo,
-  T as useState
+  H as parseHtmlToVNode,
+  m as patchDom,
+  I as removeDomAttribute,
+  F as renderVNode,
+  j as serializeVNodeToHtml,
+  P as setDomAttribute,
+  v as useEffect,
+  S as useMemo,
+  V as useState
 };

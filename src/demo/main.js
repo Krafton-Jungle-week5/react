@@ -48,6 +48,7 @@ function App() {
     setSyncMessage(`${nextMessage} (${timestamp()})`);
   }, [title, summary.completed, summary.percent, summary.total]);
 
+  // [1] 사용자가 "항목 추가" 버튼을 클릭하면 이 이벤트 핸들러가 가장 먼저 실행됩니다.
   const handleAddConcept = () => {
     const label = draft.trim();
 
@@ -55,6 +56,8 @@ function App() {
       return;
     }
 
+    // [2] 상태 업데이트 함수(setState)를 호출합니다. 
+    // 이것이 새로운 값을 큐에 넣고 렌더링 파이프라인을 가동하는 시작점입니다.
     setConcepts((current) => [
       ...current,
       {

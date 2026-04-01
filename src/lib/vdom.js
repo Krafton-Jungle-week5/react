@@ -225,6 +225,14 @@ export function mountVNode(container, node) {
   container.replaceChildren(rendered);
 }
 
+export function patchDom(container, previousTree, nextTree) {
+  patchChildren(
+    container,
+    previousTree?.children || [],
+    nextTree?.children || [],
+  );
+}
+
 export function setDomAttribute(element, name, value) {
   if (isEventAttribute(name, value)) {
     const eventName = name.slice(2).toLowerCase();
@@ -282,6 +290,92 @@ export function removeDomAttribute(element, name) {
   }
 
   element.removeAttribute(name);
+}
+
+function patchChildren(parentNode, previousChildren, nextChildren) {
+  const sharedLength = Math.min(previousChildren.length, nextChildren.length);
+
+  for (let index = 0; index < sharedLength; index += 1) {
+    patchExistingChild(
+      parentNode,
+      index,
+      previousChildren[index],
+      nextChildren[index],
+    );
+  }
+
+  for (let index = sharedLength; index < nextChildren.length; index += 1) {
+    const referenceNode = parentNode.childNodes[index] || null;
+    const childNode = renderVNode(nextChildren[index], parentNode.ownerDocument || document);
+
+    parentNode.insertBefore(childNode, referenceNode);
+  }
+
+  for (let index = previousChildren.length - 1; index >= nextChildren.length; index -= 1) {
+    const childNode = parentNode.childNodes[index];
+
+    if (childNode) {
+      parentNode.removeChild(childNode);
+    }
+  }
+}
+
+function patchExistingChild(parentNode, index, previousNode, nextNode) {
+  const currentDomNode = parentNode.childNodes[index];
+
+  if (!currentDomNode) {
+    parentNode.append(renderVNode(nextNode, parentNode.ownerDocument || document));
+    return;
+  }
+
+  if (!canReuseVNode(previousNode, nextNode)) {
+    parentNode.replaceChild(
+      renderVNode(nextNode, parentNode.ownerDocument || document),
+      currentDomNode,
+    );
+    return;
+  }
+
+  if (nextNode.type === 'text') {
+    if (previousNode.value !== nextNode.value) {
+      currentDomNode.textContent = nextNode.value;
+    }
+    return;
+  }
+
+  patchAttributes(currentDomNode, previousNode.attrs || {}, nextNode.attrs || {});
+
+  if (nextNode.tag === 'textarea' || VOID_TAGS.has(nextNode.tag)) {
+    return;
+  }
+
+  patchChildren(
+    currentDomNode,
+    previousNode.children || [],
+    nextNode.children || [],
+  );
+}
+
+function patchAttributes(element, previousAttrs, nextAttrs) {
+  if (element?.nodeType !== ELEMENT_NODE) {
+    return;
+  }
+
+  const attrNames = new Set([
+    ...Object.keys(previousAttrs),
+    ...Object.keys(nextAttrs),
+  ]);
+
+  for (const name of attrNames) {
+    if (!(name in nextAttrs)) {
+      removeDomAttribute(element, name);
+      continue;
+    }
+
+    if (previousAttrs[name] !== nextAttrs[name]) {
+      setDomAttribute(element, name, nextAttrs[name]);
+    }
+  }
 }
 
 export function serializeVNodeToHtml(node) {
@@ -354,6 +448,22 @@ function escapeAttribute(text) {
 
 function isEventAttribute(name, value) {
   return name.startsWith('on') && typeof value === 'function';
+}
+
+function canReuseVNode(previousNode, nextNode) {
+  if (!previousNode || !nextNode) {
+    return false;
+  }
+
+  if (previousNode.type !== nextNode.type) {
+    return false;
+  }
+
+  if (previousNode.type === 'text') {
+    return true;
+  }
+
+  return previousNode.tag === nextNode.tag;
 }
 
 export function countVNodeStats(tree) {

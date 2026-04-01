@@ -1,5 +1,4 @@
-import { commitRoot, reconcileTrees } from './fiber.js';
-import { createRootVNode, mountVNode } from './vdom.js';
+import { createRootVNode, mountVNode, patchDom } from './vdom.js';
 
 let activeComponent = null;
 
@@ -90,8 +89,7 @@ export class FunctionComponent {
       mountVNode(this.container, nextTree);
       this.isMounted = true;
     } else {
-      const work = reconcileTrees(this.currentTree, nextTree);
-      commitRoot(this.container, work.rootFiber);
+      patchDom(this.container, this.currentTree, nextTree);
     }
 
     this.currentTree = nextTree;

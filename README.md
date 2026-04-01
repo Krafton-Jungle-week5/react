@@ -1,13 +1,13 @@
 # react2
 
-브라우저 DOM을 Virtual DOM으로 정규화하고, 이전 트리와 다음 트리를 비교한 뒤 필요한 DOM 연산만 commit 하는 작은 JavaScript 라이브러리입니다.
+브라우저 DOM을 Virtual DOM으로 정규화하고, 이전 트리와 다음 트리를 비교한 뒤 필요한 DOM 연산만 patch 하는 작은 JavaScript 라이브러리입니다.
 
 이번 과제 버전에서는 여기에 루트 전용 `FunctionComponent` 런타임과 `useState`, `useEffect`, `useMemo`를 직접 구현해 학습용 데모 페이지까지 포함했습니다.
 
 ## 포함된 모듈
 
 - `vdom`: DOM <-> Virtual DOM 변환, 렌더링, 직렬화
-- `fiber`: reconciliation, effect queue 생성, commit 실행
+- `runtime`: 루트 컴포넌트 실행, hooks 저장, 상태 변경 후 재렌더링
 
 ## 설치
 
@@ -51,7 +51,7 @@ npm run dev
   - dependency 가 바뀔 때만 계산 결과를 다시 만듭니다.
 - Virtual DOM + Diff + Patch
   - 루트 컴포넌트가 생성한 새 Virtual DOM 트리를 기존 트리와 비교합니다.
-  - 바뀐 부분만 fiber effect 로 만들고, commit 단계에서 실제 DOM에 반영합니다.
+  - 바뀐 부분만 직접 patch 해서 실제 DOM에 반영합니다.
 
 ## 실제 React와의 차이
 
@@ -69,9 +69,8 @@ import {
   FunctionComponent,
   h,
   mountVNode,
+  patchDom,
   parseHtmlToVNode,
-  reconcileTrees,
-  commitRoot,
 } from 'react2-vdom';
 
 const container = document.querySelector('#app');
@@ -90,9 +89,7 @@ const nextTree = parseHtmlToVNode(`
 `);
 
 mountVNode(container, previousTree);
-
-const work = reconcileTrees(previousTree, nextTree);
-commitRoot(container, work.rootFiber);
+patchDom(container, previousTree, nextTree);
 
 function App() {
   return h('h1', {}, 'Hello Hooks');
@@ -105,4 +102,3 @@ new FunctionComponent(App).mount(container);
 
 - `react2-vdom`
 - `react2-vdom/vdom`
-- `react2-vdom/fiber`
