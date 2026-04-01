@@ -1,0 +1,51 @@
+<svg width="1280" height="620" viewBox="0 0 1280 620" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="9" refY="5" orient="auto" markerUnits="strokeWidth">
+      <path d="M0 0L10 5L0 10V0Z" fill="#334155"/>
+    </marker>
+    <style>
+      .title { font: 700 28px 'Segoe UI', Arial, sans-serif; fill: #0f172a; }
+      .subtitle { font: 400 14px 'Segoe UI', Arial, sans-serif; fill: #475569; }
+      .boxTitle { font: 700 18px 'Segoe UI', Arial, sans-serif; fill: #0f172a; }
+      .body { font: 500 14px 'Segoe UI', Arial, sans-serif; fill: #1e293b; }
+      .small { font: 400 12px 'Segoe UI', Arial, sans-serif; fill: #64748b; }
+      .card { fill: #f8fafc; stroke: #94a3b8; stroke-width: 1.6; rx: 18; }
+      .accent { fill: #eff6ff; stroke: #60a5fa; stroke-width: 1.8; rx: 18; }
+      .effect { fill: #fef3c7; stroke: #f59e0b; stroke-width: 1.6; rx: 18; }
+      .green { fill: #ecfdf5; stroke: #10b981; stroke-width: 1.6; rx: 18; }
+      .arrow { stroke: #334155; stroke-width: 2.6; marker-end: url(#arrow); }
+    </style>
+  </defs>
+
+  <rect width="1280" height="620" fill="#ffffff"/>
+  <text x="64" y="56" class="title">Re-Render 2. microtask flush 이후 commit까지</text>
+  <text x="64" y="82" class="subtitle">예약된 update가 실행되면 queue를 반영해 nextTree를 만들고, diff / patch 뒤에 effect를 실행합니다.</text>
+
+  <rect x="90" y="180" width="240" height="110" class="accent"/>
+  <text x="210" y="224" text-anchor="middle" class="boxTitle">microtask flush</text>
+  <text x="210" y="250" text-anchor="middle" class="body">예약된 update 실행</text>
+  <text x="210" y="272" text-anchor="middle" class="small">Re-Render 시작점</text>
+
+  <rect x="380" y="180" width="240" height="110" class="card"/>
+  <text x="500" y="224" text-anchor="middle" class="boxTitle">queue 반영</text>
+  <text x="500" y="250" text-anchor="middle" class="body">useState 최신값 계산</text>
+  <text x="500" y="272" text-anchor="middle" class="small">App() -&gt; nextTree 생성</text>
+
+  <rect x="670" y="180" width="240" height="110" class="green"/>
+  <text x="790" y="224" text-anchor="middle" class="boxTitle">diff + patchDom()</text>
+  <text x="790" y="250" text-anchor="middle" class="body">바뀐 DOM만 갱신</text>
+  <text x="790" y="272" text-anchor="middle" class="small">currentTree 교체</text>
+
+  <rect x="960" y="180" width="240" height="110" class="effect"/>
+  <text x="1080" y="224" text-anchor="middle" class="boxTitle">flushEffects()</text>
+  <text x="1080" y="250" text-anchor="middle" class="body">cleanup 후 새 effect 실행</text>
+  <text x="1080" y="272" text-anchor="middle" class="small">commit 뒤 실행</text>
+
+  <line x1="330" y1="235" x2="380" y2="235" class="arrow"/>
+  <line x1="620" y1="235" x2="670" y2="235" class="arrow"/>
+  <line x1="910" y1="235" x2="960" y2="235" class="arrow"/>
+
+  <rect x="350" y="380" width="580" height="92" rx="16" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.4"/>
+  <text x="640" y="418" text-anchor="middle" class="boxTitle">핵심 포인트</text>
+  <text x="640" y="444" text-anchor="middle" class="body">Re-Render의 DOM 반영과 effect 실행은 분리되어 있습니다.</text>
+ </svg>

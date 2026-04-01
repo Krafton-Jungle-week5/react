@@ -1,0 +1,50 @@
+<svg width="1280" height="560" viewBox="0 0 1280 560" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="9" refY="5" orient="auto" markerUnits="strokeWidth">
+      <path d="M0 0L10 5L0 10V0Z" fill="#334155"/>
+    </marker>
+    <style>
+      .title { font: 700 28px 'Segoe UI', Arial, sans-serif; fill: #0f172a; }
+      .subtitle { font: 400 14px 'Segoe UI', Arial, sans-serif; fill: #475569; }
+      .boxTitle { font: 700 18px 'Segoe UI', Arial, sans-serif; fill: #0f172a; }
+      .body { font: 500 14px 'Segoe UI', Arial, sans-serif; fill: #1e293b; }
+      .small { font: 400 12px 'Segoe UI', Arial, sans-serif; fill: #64748b; }
+      .card { fill: #f8fafc; stroke: #94a3b8; stroke-width: 1.6; rx: 18; }
+      .accent { fill: #eff6ff; stroke: #60a5fa; stroke-width: 1.8; rx: 18; }
+      .note { fill: #fef3c7; stroke: #f59e0b; stroke-width: 1.4; rx: 16; }
+      .arrow { stroke: #334155; stroke-width: 2.6; marker-end: url(#arrow); }
+    </style>
+  </defs>
+
+  <rect width="1280" height="560" fill="#ffffff"/>
+  <text x="64" y="56" class="title">초기화 1. 첫 마운트 전체 흐름</text>
+  <text x="64" y="82" class="subtitle">첫 렌더는 이전 트리 비교 없이, 새 Virtual DOM을 바로 실제 DOM에 붙입니다.</text>
+
+  <rect x="70" y="170" width="250" height="110" class="accent"/>
+  <text x="195" y="214" text-anchor="middle" class="boxTitle">mount(container)</text>
+  <text x="195" y="240" text-anchor="middle" class="body">루트 컴포넌트 시작</text>
+  <text x="195" y="262" text-anchor="middle" class="small">container 참조 저장</text>
+
+  <rect x="370" y="170" width="250" height="110" class="card"/>
+  <text x="495" y="214" text-anchor="middle" class="boxTitle">renderAndCommit()</text>
+  <text x="495" y="240" text-anchor="middle" class="body">렌더 사이클 진입</text>
+  <text x="495" y="262" text-anchor="middle" class="small">hookIndex = 0</text>
+
+  <rect x="670" y="170" width="250" height="110" class="card"/>
+  <text x="795" y="214" text-anchor="middle" class="boxTitle">App(props) -&gt; nextTree</text>
+  <text x="795" y="240" text-anchor="middle" class="body">h()로 VNode 생성</text>
+  <text x="795" y="262" text-anchor="middle" class="small">렌더 결과 확정</text>
+
+  <rect x="970" y="170" width="250" height="110" class="accent"/>
+  <text x="1095" y="214" text-anchor="middle" class="boxTitle">mountVNode()</text>
+  <text x="1095" y="240" text-anchor="middle" class="body">실제 DOM에 한 번에 반영</text>
+  <text x="1095" y="262" text-anchor="middle" class="small">currentTree 저장 후 effect 준비</text>
+
+  <line x1="320" y1="225" x2="370" y2="225" class="arrow"/>
+  <line x1="620" y1="225" x2="670" y2="225" class="arrow"/>
+  <line x1="920" y1="225" x2="970" y2="225" class="arrow"/>
+
+  <rect x="360" y="360" width="560" height="92" class="note"/>
+  <text x="640" y="398" text-anchor="middle" class="boxTitle">핵심 포인트</text>
+  <text x="640" y="424" text-anchor="middle" class="body">첫 마운트에서는 diff / patch 단계가 없습니다.</text>
+ </svg>

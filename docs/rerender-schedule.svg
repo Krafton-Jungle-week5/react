@@ -1,0 +1,50 @@
+<svg width="1280" height="560" viewBox="0 0 1280 560" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="9" refY="5" orient="auto" markerUnits="strokeWidth">
+      <path d="M0 0L10 5L0 10V0Z" fill="#334155"/>
+    </marker>
+    <style>
+      .title { font: 700 28px 'Segoe UI', Arial, sans-serif; fill: #0f172a; }
+      .subtitle { font: 400 14px 'Segoe UI', Arial, sans-serif; fill: #475569; }
+      .boxTitle { font: 700 18px 'Segoe UI', Arial, sans-serif; fill: #0f172a; }
+      .body { font: 500 14px 'Segoe UI', Arial, sans-serif; fill: #1e293b; }
+      .small { font: 400 12px 'Segoe UI', Arial, sans-serif; fill: #64748b; }
+      .card { fill: #f8fafc; stroke: #94a3b8; stroke-width: 1.6; rx: 18; }
+      .accent { fill: #eff6ff; stroke: #60a5fa; stroke-width: 1.8; rx: 18; }
+      .note { fill: #fef3c7; stroke: #f59e0b; stroke-width: 1.4; rx: 16; }
+      .arrow { stroke: #334155; stroke-width: 2.6; marker-end: url(#arrow); }
+    </style>
+  </defs>
+
+  <rect width="1280" height="560" fill="#ffffff"/>
+  <text x="64" y="56" class="title">Re-Render 1. 사용자 이벤트에서 update 예약까지</text>
+  <text x="64" y="82" class="subtitle">Re-Render는 DOM 변경이 아니라 setState() 호출에서 시작되고, 실제 업데이트는 microtask로 미뤄집니다.</text>
+
+  <rect x="70" y="170" width="240" height="110" class="accent"/>
+  <text x="190" y="214" text-anchor="middle" class="boxTitle">사용자 이벤트</text>
+  <text x="190" y="240" text-anchor="middle" class="body">click / input 발생</text>
+  <text x="190" y="262" text-anchor="middle" class="small">브라우저가 핸들러 호출</text>
+
+  <rect x="360" y="170" width="240" height="110" class="card"/>
+  <text x="480" y="214" text-anchor="middle" class="boxTitle">setState(next)</text>
+  <text x="480" y="240" text-anchor="middle" class="body">setter 실행</text>
+  <text x="480" y="262" text-anchor="middle" class="small">아직 DOM은 안 바뀜</text>
+
+  <rect x="650" y="170" width="240" height="110" class="card"/>
+  <text x="770" y="214" text-anchor="middle" class="boxTitle">state queue 저장</text>
+  <text x="770" y="240" text-anchor="middle" class="body">updater 누적</text>
+  <text x="770" y="262" text-anchor="middle" class="small">여러 변경을 모아 둠</text>
+
+  <rect x="940" y="170" width="240" height="110" class="accent"/>
+  <text x="1060" y="214" text-anchor="middle" class="boxTitle">microtask 예약</text>
+  <text x="1060" y="240" text-anchor="middle" class="body">update는 한 번만 예약</text>
+  <text x="1060" y="262" text-anchor="middle" class="small">batching 지점</text>
+
+  <line x1="310" y1="225" x2="360" y2="225" class="arrow"/>
+  <line x1="600" y1="225" x2="650" y2="225" class="arrow"/>
+  <line x1="890" y1="225" x2="940" y2="225" class="arrow"/>
+
+  <rect x="330" y="360" width="620" height="92" class="note"/>
+  <text x="640" y="398" text-anchor="middle" class="boxTitle">핵심 포인트</text>
+  <text x="640" y="424" text-anchor="middle" class="body">같은 tick의 연속 setState도 하나의 Re-Render로 합쳐집니다.</text>
+ </svg>
