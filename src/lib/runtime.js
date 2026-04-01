@@ -141,30 +141,18 @@ export function h(type, props = {}, ...children) {
 
 export function useState(initialValue) {
   const component = assertHookAccess('useState');
-  const index = component.hookIndex++;
-  let hook = component.hooks[index];
-
-  if (!hook) {
-    hook = {
+  const hook = getHook(
+    component,
+    'useState',
+    'state',
+    () => ({
       kind: 'state',
       queue: [],
       value: resolveInitialValue(initialValue),
-    };
-    component.hooks[index] = hook;
-  }
+    }),
+  );
 
-  assertHookKind(hook, 'state', 'useState');
-
-  if (hook.queue.length) {
-    let nextValue = hook.value;
-
-    for (const update of hook.queue) {
-      nextValue = typeof update === 'function' ? update(nextValue) : update;
-    }
-
-    hook.queue = [];
-    hook.value = nextValue;
-  }
+  flushStateQueue(hook);
 
   const setState = (nextValue) => {
     if (component.isRendering) {
@@ -180,19 +168,17 @@ export function useState(initialValue) {
 
 export function useEffect(callback, deps) {
   const component = assertHookAccess('useEffect');
-  const index = component.hookIndex++;
-  let hook = component.hooks[index];
-
-  if (!hook) {
-    hook = {
+  const index = component.hookIndex;
+  const hook = getHook(
+    component,
+    'useEffect',
+    'effect',
+    () => ({
       kind: 'effect',
       cleanup: null,
       deps: undefined,
-    };
-    component.hooks[index] = hook;
-  }
-
-  assertHookKind(hook, 'effect', 'useEffect');
+    }),
+  );
 
   if (shouldRunHook(hook.deps, deps)) {
     component.pendingEffects.push({
@@ -205,19 +191,16 @@ export function useEffect(callback, deps) {
 
 export function useMemo(factory, deps) {
   const component = assertHookAccess('useMemo');
-  const index = component.hookIndex++;
-  let hook = component.hooks[index];
-
-  if (!hook) {
-    hook = {
+  const hook = getHook(
+    component,
+    'useMemo',
+    'memo',
+    () => ({
       kind: 'memo',
       deps: undefined,
       value: undefined,
-    };
-    component.hooks[index] = hook;
-  }
-
-  assertHookKind(hook, 'memo', 'useMemo');
+    }),
+  );
 
   if (shouldRunHook(hook.deps, deps)) {
     hook.value = factory();
@@ -243,6 +226,19 @@ function assertHookKind(hook, expectedKind, name) {
   if (hook.kind !== expectedKind) {
     throw new Error(`${name} was called in a different order. Hooks must keep a stable call order.`);
   }
+}
+
+function getHook(component, name, expectedKind, createHook) {
+  const index = component.hookIndex++;
+  let hook = component.hooks[index];
+
+  if (!hook) {
+    hook = createHook();
+    component.hooks[index] = hook;
+  }
+
+  assertHookKind(hook, expectedKind, name);
+  return hook;
 }
 
 function normalizeProps(props = {}) {
@@ -334,6 +330,21 @@ function cloneDeps(deps) {
 
 function resolveInitialValue(initialValue) {
   return typeof initialValue === 'function' ? initialValue() : initialValue;
+}
+
+function flushStateQueue(hook) {
+  if (!hook.queue.length) {
+    return;
+  }
+
+  let nextValue = hook.value;
+
+  for (const update of hook.queue) {
+    nextValue = typeof update === 'function' ? update(nextValue) : update;
+  }
+
+  hook.queue = [];
+  hook.value = nextValue;
 }
 
 function scheduleMicrotask(callback) {
