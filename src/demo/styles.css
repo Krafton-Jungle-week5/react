@@ -216,6 +216,9 @@ button {
 .side-panel {
   min-height: 0;
   min-width: 0;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  gap: 20px;
 }
 
 .inspector-shell {
@@ -230,6 +233,64 @@ button {
 
 .history-card {
   min-height: 0;
+}
+
+.move-history-card {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.move-history-caption {
+  margin: 0;
+}
+
+.move-history-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-height: 260px;
+  overflow: auto;
+  padding-right: 4px;
+}
+
+.move-history-button {
+  width: 100%;
+  display: grid;
+  grid-template-columns: 48px minmax(0, 1fr);
+  gap: 12px;
+  align-items: center;
+  padding: 12px 14px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 18px;
+  background: rgba(11, 19, 39, 0.92);
+  color: #ecf4ff;
+  text-align: left;
+  cursor: pointer;
+  transition: transform 140ms ease, border-color 140ms ease, background 140ms ease;
+}
+
+.move-history-button:hover:not(:disabled) {
+  transform: translateY(-1px);
+  border-color: rgba(255, 183, 3, 0.34);
+}
+
+.move-history-button:disabled,
+.move-history-button.is-active {
+  border-color: rgba(61, 220, 151, 0.42);
+  background: rgba(18, 43, 45, 0.9);
+  cursor: default;
+}
+
+.move-history-step {
+  color: #72ddf7;
+  font-weight: 700;
+}
+
+.move-history-label {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .history-title {
@@ -449,8 +510,10 @@ button {
     height: auto;
   }
 
-  .history-card {
+  .history-card,
+  .move-history-list {
     min-height: 280px;
+    max-height: none;
   }
 }
 

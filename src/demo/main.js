@@ -1,9 +1,11 @@
 import { FunctionComponent, h, useEffect, useMemo, useState } from '../index.js';
 import {
+  buildHistoryLabel,
   calculateResult,
   createInitialGameState,
   getCurrentBoard,
   getMoveCount,
+  jumpToMove,
   resetBoard,
   playMove,
 } from '../tic-tac-toe/model.js';
@@ -101,7 +103,45 @@ function App() {
           ),
         ),
       ),
-      h('aside', { class: 'side-panel', id: 'inspector-root' }),
+      h(
+        'aside',
+        { class: 'side-panel' },
+        h(MoveHistoryPanel, {
+          currentStep: game.stepIndex,
+          history: game.history,
+          onJump: (stepIndex) => setGame((currentGame) => jumpToMove(currentGame, stepIndex)),
+        }),
+        h('div', { id: 'inspector-root' }),
+      ),
+    ),
+  );
+}
+
+function MoveHistoryPanel({ currentStep, history, onJump }) {
+  return h(
+    'section',
+    { class: 'info-card history-card move-history-card' },
+    h('p', { class: 'panel-kicker' }, 'Moves'),
+    h('h3', { class: 'history-title' }, 'Move history'),
+    h('p', { class: 'timeline-detail move-history-caption' }, `현재 선택한 수: ${currentStep}`),
+    h(
+      'div',
+      { class: 'move-history-list' },
+      ...history.map((_, index) => {
+        const isActive = index === currentStep;
+
+        return h(
+          'button',
+          {
+            class: `move-history-button${isActive ? ' is-active' : ''}`,
+            disabled: isActive,
+            onClick: () => onJump(index),
+            type: 'button',
+          },
+          h('span', { class: 'move-history-step' }, `#${index}`),
+          h('span', { class: 'move-history-label' }, buildHistoryLabel(history, index)),
+        );
+      }),
     ),
   );
 }
