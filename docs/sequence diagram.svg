@@ -122,7 +122,6 @@
       <text x="1455" y="848" text-anchor="middle" class="small">sortPatchOperations()</text>
       <text x="1455" y="867" text-anchor="middle" class="small">applyPatchOperations()</text>
       <line x1="1455" y1="882" x2="240" y2="882" class="arrow"/>
-      <text x="848" y="873" text-anchor="middle" class="label">필요한 DOM만 patch 적용</text>
     </g>
 
     <path d="M800 900 C850 900, 850 938, 800 938" class="arrow"/>
