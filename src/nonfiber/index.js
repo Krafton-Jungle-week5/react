@@ -1,2 +1,1 @@
-export * from './vdom.js';
-export * from './runtime.js';
+export * from '../index.js';
