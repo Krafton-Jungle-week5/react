@@ -1,5 +1,3 @@
-const MAX_TIMELINE_ENTRIES = 12;
-
 let nextTimelineId = 1;
 
 export function createInitialTimeline() {
@@ -21,8 +19,12 @@ export function createTimelineEntry(kind, title, detail) {
   };
 }
 
-export function pushTimelineEntry(currentTimeline, entry) {
-  return [entry, ...currentTimeline].slice(0, MAX_TIMELINE_ENTRIES);
+export function startTimeline(...entries) {
+  return entries.filter(Boolean);
+}
+
+export function appendTimelineEntry(currentTimeline, entry) {
+  return [...currentTimeline, entry];
 }
 
 export function describeAction(action, nextGame, result) {

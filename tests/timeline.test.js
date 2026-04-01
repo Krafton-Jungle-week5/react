@@ -1,10 +1,11 @@
 import {
   createInitialTimeline,
   createTimelineEntry,
+  appendTimelineEntry,
   describeAction,
   describeCommit,
   describeEffectSync,
-  pushTimelineEntry,
+  startTimeline,
 } from '../src/tic-tac-toe/timeline.js';
 
 describe('runtime timeline helpers', () => {
@@ -15,11 +16,17 @@ describe('runtime timeline helpers', () => {
     expect(timeline[0].title).toBe('Runtime ready');
   });
 
-  it('pushes the newest entry to the front of the timeline', () => {
+  it('restarts the timeline for the current action and appends later phases in order', () => {
     const first = createTimelineEntry('system', 'Older', 'first');
     const second = createTimelineEntry('action', 'Newer', 'second');
+    const third = createTimelineEntry('render', 'Committed', 'third');
 
-    expect(pushTimelineEntry([first], second).map((entry) => entry.title)).toEqual(['Newer', 'Older']);
+    expect(startTimeline(first, second).map((entry) => entry.title)).toEqual(['Older', 'Newer']);
+    expect(appendTimelineEntry(startTimeline(first, second), third).map((entry) => entry.title)).toEqual([
+      'Older',
+      'Newer',
+      'Committed',
+    ]);
   });
 
   it('describes accepted square clicks and root state queueing in readable language', () => {

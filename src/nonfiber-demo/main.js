@@ -11,10 +11,11 @@ import {
 import {
   createInitialTimeline,
   createTimelineEntry,
+  appendTimelineEntry,
   describeAction,
   describeCommit,
   describeEffectSync,
-  pushTimelineEntry,
+  startTimeline,
 } from '../tic-tac-toe/timeline.js';
 import '../demo/styles.css';
 
@@ -39,7 +40,7 @@ function App() {
 
   useEffect(() => {
     setTimeline((currentTimeline) =>
-      pushTimelineEntry(
+      appendTimelineEntry(
         currentTimeline,
         createTimelineEntry('render', 'Render committed', describeCommit(game, result, moveCount)),
       ),
@@ -54,7 +55,7 @@ function App() {
         : `Non-Fiber Tic-Tac-Toe - ${game.xIsNext ? 'X' : 'O'} turn`;
 
     setTimeline((currentTimeline) =>
-      pushTimelineEntry(
+      appendTimelineEntry(
         currentTimeline,
         createTimelineEntry('effect', 'Effect synchronized', describeEffectSync(game.xIsNext, result)),
       ),
@@ -63,9 +64,8 @@ function App() {
 
   const applyGameAction = (action, nextGame) => {
     if (nextGame === game) {
-      setTimeline((currentTimeline) =>
-        pushTimelineEntry(
-          currentTimeline,
+      setTimeline(
+        startTimeline(
           createTimelineEntry('action', 'Input ignored', describeAction({ ...action, accepted: false }, game, result)),
         ),
       );
@@ -75,25 +75,20 @@ function App() {
     const nextBoard = getCurrentBoard(nextGame);
     const nextResult = calculateResult(nextBoard);
 
-    setTimeline((currentTimeline) => {
-      const withAction = pushTimelineEntry(
-        currentTimeline,
+    setTimeline(
+      startTimeline(
         createTimelineEntry(
           'action',
           action.type === 'square' ? `Square ${action.index + 1} clicked` : action.title,
           describeAction({ ...action, accepted: true }, nextGame, nextResult),
         ),
-      );
-
-      return pushTimelineEntry(
-        withAction,
         createTimelineEntry(
           'state',
           'Root state queued',
           `The root App scheduled a new game snapshot. Next step: ${nextGame.stepIndex}, next turn: ${nextGame.xIsNext ? 'X' : 'O'}.`,
         ),
-      );
-    });
+      ),
+    );
 
     setGame(nextGame);
   };
