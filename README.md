@@ -46,25 +46,25 @@
 
 첫 렌더에서는 이전 트리가 없기 때문에 `diff` 없이 `mountVNode()`가 실제 DOM을 한 번에 붙입니다.
 
-![초기화 첫 마운트 전체 흐름](docs/init-mount-overview.svg)
+![초기화 첫 마운트 전체 흐름](react/docs/init-mount-overview.svg)
 
 ### 초기화 2. 첫 렌더에서 hooks 슬롯이 채워지는 방식
 
 첫 렌더에서 hook 호출 순서가 `hooks[]` 슬롯 구조를 만들고, 이후 Re-Render도 같은 순서를 기준으로 재사용합니다.
 
-![초기화 hooks 슬롯 구조](docs/init-hooks-slots.svg)
+![초기화 hooks 슬롯 구조](react/docs/init-hooks-slots.svg)
 
 ### Re-Render 1. 사용자 이벤트에서 update 예약까지
 
 Re-Render의 시작점은 DOM 변경이 아니라 `setState()`이며, setter는 값을 queue에 넣고 실제 렌더는 microtask 하나로 예약합니다.
 
-![Re-Render update 예약 흐름](docs/rerender-schedule.svg)
+![Re-Render update 예약 흐름](react/docs/rerender-schedule.svg)
 
 ### Re-Render 2. microtask flush 이후 commit까지
 
 Re-Render에서는 `useState` queue를 반영해 새 `nextTree`를 만들고, `patchDom()`이 이전 트리와 비교해서 필요한 DOM만 갱신합니다.
 
-![Re-Render commit 흐름](docs/rerender-commit.svg)
+![Re-Render commit 흐름](react/docs/rerender-commit.svg)
 
 짧게 정리하면:
 
@@ -77,6 +77,10 @@ Re-Render에서는 `useState` queue를 반영해 새 `nextTree`를 만들고, `p
 - 경로: `/`
 - 내용: Tic-Tac-Toe 게임 + Runtime Inspector
 - 목적: 상태 변경, 렌더링, Hook 저장 구조를 한 화면에서 설명
+
+### 데모 페이지 스크린샷
+
+![Tic-Tac-Toe Runtime Inspector 데모 페이지](react/docs/demo-page.png)
 
 ## 3. 프로젝트 구조
 
