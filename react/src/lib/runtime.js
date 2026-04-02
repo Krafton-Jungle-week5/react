@@ -532,7 +532,7 @@ function createEffectFields(deps, cleanup) {
   if (!Array.isArray(deps) || !deps.length) {
     return [
       { label: '의존성', value: '없음' },
-      { label: 'cleanup', value: cleanup ? '있음' : '없음' },
+      ...(cleanup ? [{ label: 'cleanup', value: '있음' }] : []),
     ];
   }
 
@@ -545,7 +545,7 @@ function createEffectFields(deps, cleanup) {
       label: '의존성 2',
       value: formatEffectDependency(deps[1], 1),
     },
-    { label: 'cleanup', value: cleanup ? '있음' : '없음' },
+    ...(cleanup ? [{ label: 'cleanup', value: '있음' }] : []),
   ].filter((entry) => entry.value !== undefined);
 }
 

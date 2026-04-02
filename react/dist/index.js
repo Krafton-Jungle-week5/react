@@ -321,7 +321,7 @@ function z(e) {
 function j(e, t) {
   return !Array.isArray(e) || !e.length ? [
     { label: "의존성", value: "없음" },
-    { label: "cleanup", value: t ? "있음" : "없음" }
+    ...t ? [{ label: "cleanup", value: "있음" }] : []
   ] : [
     {
       label: "의존성 1",
@@ -331,7 +331,7 @@ function j(e, t) {
       label: "의존성 2",
       value: p(e[1], 1)
     },
-    { label: "cleanup", value: t ? "있음" : "없음" }
+    ...t ? [{ label: "cleanup", value: "있음" }] : []
   ].filter((n) => n.value !== void 0);
 }
 function p(e, t) {

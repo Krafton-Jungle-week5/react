@@ -1,0 +1,52 @@
+<svg width="1280" height="620" viewBox="0 0 1280 620" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="9" refY="5" orient="auto" markerUnits="strokeWidth">
+      <path d="M0 0L10 5L0 10V0Z" fill="#334155"/>
+    </marker>
+    <style>
+      .title { font: 700 28px 'Segoe UI', Arial, sans-serif; fill: #0f172a; }
+      .subtitle { font: 400 14px 'Segoe UI', Arial, sans-serif; fill: #475569; }
+      .boxTitle { font: 700 18px 'Segoe UI', Arial, sans-serif; fill: #0f172a; }
+      .body { font: 500 14px 'Segoe UI', Arial, sans-serif; fill: #1e293b; }
+      .small { font: 400 12px 'Segoe UI', Arial, sans-serif; fill: #64748b; }
+      .card { fill: #f8fafc; stroke: #94a3b8; stroke-width: 1.6; rx: 18; }
+      .accent { fill: #eff6ff; stroke: #60a5fa; stroke-width: 1.8; rx: 18; }
+      .slot { fill: #eef2ff; stroke: #6366f1; stroke-width: 1.8; rx: 18; }
+      .note { fill: #fef3c7; stroke: #f59e0b; stroke-width: 1.4; rx: 16; }
+      .arrow { stroke: #334155; stroke-width: 2.6; marker-end: url(#arrow); }
+    </style>
+  </defs>
+
+  <rect width="1280" height="620" fill="#ffffff"/>
+  <text x="64" y="56" class="title">초기화 2. hooks[] 슬롯이 채워지는 방식</text>
+  <text x="64" y="82" class="subtitle">첫 렌더에서 호출 순서가 슬롯 구조를 만들고, 다음 렌더도 그 순서를 그대로 재사용합니다.</text>
+
+  <rect x="90" y="170" width="230" height="110" class="accent"/>
+  <text x="205" y="214" text-anchor="middle" class="boxTitle">render 시작</text>
+  <text x="205" y="240" text-anchor="middle" class="body">hookIndex = 0</text>
+  <text x="205" y="262" text-anchor="middle" class="small">루트 렌더 준비</text>
+
+  <rect x="380" y="170" width="320" height="110" class="slot"/>
+  <text x="540" y="208" text-anchor="middle" class="boxTitle">hooks[] 슬롯 생성</text>
+  <text x="540" y="234" text-anchor="middle" class="body">slot 0: useState</text>
+  <text x="540" y="256" text-anchor="middle" class="body">slot 1: useMemo</text>
+  <text x="540" y="278" text-anchor="middle" class="body">slot 2: useEffect</text>
+
+  <rect x="760" y="170" width="220" height="110" class="card"/>
+  <text x="870" y="214" text-anchor="middle" class="boxTitle">effect는 대기</text>
+  <text x="870" y="240" text-anchor="middle" class="body">pendingEffects에 등록</text>
+  <text x="870" y="262" text-anchor="middle" class="small">commit 뒤 실행</text>
+
+  <rect x="1040" y="170" width="180" height="110" class="accent"/>
+  <text x="1130" y="214" text-anchor="middle" class="boxTitle">다음 렌더</text>
+  <text x="1130" y="240" text-anchor="middle" class="body">같은 슬롯 재사용</text>
+  <text x="1130" y="262" text-anchor="middle" class="small">순서가 바뀌면 오류</text>
+
+  <line x1="320" y1="225" x2="380" y2="225" class="arrow"/>
+  <line x1="700" y1="225" x2="760" y2="225" class="arrow"/>
+  <line x1="980" y1="225" x2="1040" y2="225" class="arrow"/>
+
+  <rect x="310" y="370" width="660" height="96" class="note"/>
+  <text x="640" y="408" text-anchor="middle" class="boxTitle">핵심 포인트</text>
+  <text x="640" y="434" text-anchor="middle" class="body">이 런타임은 hook 호출 순서를 인덱스로 기억합니다.</text>
+ </svg>
